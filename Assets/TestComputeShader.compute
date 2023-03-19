@@ -1,0 +1,85 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel Transform
+#pragma kernel Facing
+#pragma kernel Projection
+#pragma kernel Silhouette
+
+RWStructuredBuffer<float3> vertices;
+RWStructuredBuffer<int> triangles;
+RWStructuredBuffer<float3> transformed;
+RWStructuredBuffer<int> facing;
+RWStructuredBuffer<float3> projection;
+RWStructuredBuffer<int2> edges;
+RWStructuredBuffer<int> silhouette;
+
+float3 light;
+float4x4 transform;
+
+float3 planeNormal;
+float planeDistance;
+
+#define THREADS_PER_GROUP 1024
+
+[numthreads(8,8,1)]
+void Transform (uint3 id : SV_DispatchThreadID)
+{
+    int i = id.x + id.y * THREADS_PER_GROUP + id.z * THREADS_PER_GROUP * THREADS_PER_GROUP;
+
+    if (i >= vertices.Length) return;
+
+    transformed[i] = mul(transform, float4(vertices[i], 1)).xyz;
+}
+
+[numthreads(8,8,1)]
+void Facing (uint3 id : SV_DispatchThreadID)
+{
+    int i = id.x + id.y * THREADS_PER_GROUP + id.z * THREADS_PER_GROUP * THREADS_PER_GROUP;
+
+    if (i >= facing.Length) return;
+    int j = i * 3;
+
+    float3 v0 = transformed[triangles[j]];
+    float3 v1 = transformed[triangles[j+1]];
+    float3 v2 = transformed[triangles[j+2]];
+
+    float3 n = normalize(cross(v1 - v0, v2 - v0));
+    facing[i] = dot(n, v0 - light) < 0;
+}
+
+float3 intersectPlane (float3 p, float3 d, float3 n, float o)
+{
+    float t = (o - dot(n, p)) / dot(n, d);
+    return p + d * t;
+}
+
+[numthreads(8,8,1)]
+void Projection (uint3 id : SV_DispatchThreadID)
+{
+    int i = id.x + id.y * THREADS_PER_GROUP + id.z * THREADS_PER_GROUP * THREADS_PER_GROUP;
+
+    if (i >= projection.Length) return;
+
+    float3 v = transformed[i];
+    float3 d = v - light;
+
+    float3 p = intersectPlane(light, d, planeNormal, planeDistance);
+    
+    projection[i] = p;
+}
+
+[numthreads(8,8,1)]
+void Silhouette (uint3 id : SV_DispatchThreadID)
+{
+    int i = id.x + id.y * THREADS_PER_GROUP + id.z * THREADS_PER_GROUP * THREADS_PER_GROUP;
+
+    if (i >= edges.Length) return;
+
+    int2 e = edges[i];
+    if(e.y == -1) {
+        silhouette[i] = 1;
+        return;
+    }
+    int2 f = int2(facing[e.x], facing[e.y]);
+
+    silhouette[i] = f.x != f.y;
+}
