@@ -42,7 +42,7 @@ void Facing (uint3 id : SV_DispatchThreadID)
     float3 v1 = transformed[triangles[j+1]];
     float3 v2 = transformed[triangles[j+2]];
 
-    float3 n = normalize(cross(v1 - v0, v2 - v0));
+    float3 n = cross(v1 - v0, v2 - v0);
     facing[i] = dot(n, v0 - light) < 0;
 }
 
