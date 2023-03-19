@@ -70,9 +70,9 @@ public class ComputeTest : MonoBehaviour
         {
             var endTime = Time.realtimeSinceStartup;
             var time = endTime - startTime;
-            Debug.Log($"Time: {time}");
+            Debug.Log($"Time: {time * 1000} ms");
             var average = time / (float)iterations;
-            Debug.Log($"Average: {average}");
+            Debug.Log($"Average: {average * 1000} ms");
         }
 
         iteration++;

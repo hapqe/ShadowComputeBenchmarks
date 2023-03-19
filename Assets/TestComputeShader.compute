@@ -75,11 +75,5 @@ void Silhouette (uint3 id : SV_DispatchThreadID)
     if (i >= edges.Length) return;
 
     int2 e = edges[i];
-    if(e.y == -1) {
-        silhouette[i] = 1;
-        return;
-    }
-    int2 f = int2(facing[e.x], facing[e.y]);
-
-    silhouette[i] = f.x != f.y;
+    silhouette[i] = facing[e[0]] != facing[e[1]];
 }
